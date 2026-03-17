@@ -1,6 +1,6 @@
 Global Retail Sales & Profit Dashboard
 An interactive business intelligence dashboard analyzing sales performance, profitability, discount strategy, and geographic distribution across a global retail dataset.
-→ View Live Dashboard <!-- https://retail-sales-dashboard-2glrgrkfmhd5py98ah7jbc.streamlit.app/ -->
+→ View Live Dashboard - https://retail-sales-dashboard-2glrgrkfmhd5py98ah7jbc.streamlit.app/
 
 The Business Problem
 Retail organizations generate enormous transaction-level data, but raw data alone doesn't drive decisions. This project asks: where is value being created, where is it being destroyed, and why?
