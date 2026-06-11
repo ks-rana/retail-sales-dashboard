@@ -260,6 +260,22 @@ def estimate_aia_level(col_map, pii_cols, df_shape):
     if raw >= 4:  return 2
     return 1
 
+def build_pdf_bytes(report_text):
+    from fpdf import FPDF
+    pdf = FPDF(format="letter")
+    pdf.set_auto_page_break(auto=True, margin=14)
+    pdf.set_margins(12, 14, 12)
+    pdf.add_page()
+    pdf.set_font("Courier", size=7.5)
+    # Core PDF fonts are latin-1 only — swap the typographic characters used in the report
+    for a, b in [("—","-"),("–","-"),("·","."),("≥",">="),("≤","<="),("×","x"),
+                 ("⚠","!"),("✓","v"),("’","'"),("‘","'"),("“",'"'),("”",'"'),("■","*"),("▶",">")]:
+        report_text = report_text.replace(a, b)
+    report_text = report_text.encode("latin-1", "replace").decode("latin-1")
+    for line in report_text.split("\n"):
+        pdf.multi_cell(0, 3.4, line if line else " ", new_x="LMARGIN", new_y="NEXT")
+    return bytes(pdf.output())
+
 def build_compliance_report(meta, gov_sc, rat_lbl, gov_issues, pii_cols, proxy_cols, col_map, df_shape, aia_level):
     import datetime
     date = datetime.datetime.today().strftime("%B %d, %Y")
@@ -471,17 +487,18 @@ with st.sidebar:
     if uploaded is not None:
         try:
             raw = pd.read_excel(uploaded) if uploaded.name.endswith((".xlsx",".xls")) else pd.read_csv(uploaded)
-            st.session_state.df_raw = raw; use_demo = False
+            st.session_state.df_raw = raw; use_demo = False; st.session_state.demo_active = False
             st.success(f"✓ {len(raw):,} rows × {len(raw.columns)} columns loaded")
         except UnicodeDecodeError:
             uploaded.seek(0)
             raw = pd.read_csv(uploaded, encoding="latin-1")
-            st.session_state.df_raw = raw; use_demo = False
+            st.session_state.df_raw = raw; use_demo = False; st.session_state.demo_active = False
         except Exception as e:
             st.error(f"Could not read file: {e}")
     if use_demo:
         try:
-            raw = pd.read_csv("SuperStoreOrders - SuperStoreOrders.csv")
+            from pathlib import Path
+            raw = pd.read_csv(Path(__file__).parent / "SuperStoreOrders - SuperStoreOrders.csv")
             st.session_state.df_raw = raw
             st.info("Using built-in Superstore demo dataset")
         except FileNotFoundError:
@@ -538,7 +555,21 @@ with st.sidebar:
             st.session_state.df = df_proc
             st.rerun()
 
+        st.markdown("---")
+        st.markdown('<span class="slabel">About this tool</span>', unsafe_allow_html=True)
+        st.markdown('<p style="font-size:0.76rem;color:#c0bcb4;line-height:1.7;">Built by Khushi Rana. Educational reference only — not a formal model validation or regulatory determination.<br><a href="https://github.com/ks-rana/retail-sales-dashboard#readme" style="color:#7aacde;">README, methodology & sources →</a></p>', unsafe_allow_html=True)
         st.markdown('<p style="font-family:\'DM Mono\',monospace;font-size:0.58rem;color:rgba(200,196,188,0.25);margin-top:16px;letter-spacing:0.5px;">Universal Analytics Engine · v2.0</p>', unsafe_allow_html=True)
+
+# ── AUTO-LOAD DEMO ─────────────────────────────────────────────────────────────
+# First visit: apply the auto-detected mapping to the bundled demo dataset so the
+# dashboard is populated immediately. Uploading your own file replaces it.
+if st.session_state.df is None and st.session_state.df_raw is not None and not st.session_state.get("auto_demo_done"):
+    st.session_state.auto_demo_done = True
+    st.session_state.demo_active = True
+    _auto_cm = detect_columns(st.session_state.df_raw)
+    st.session_state.col_map = _auto_cm
+    st.session_state.df = prepare_df(st.session_state.df_raw, _auto_cm)
+    st.rerun()
 
 # ── LANDING ────────────────────────────────────────────────────────────────────
 if st.session_state.df is None:
@@ -568,6 +599,14 @@ if st.session_state.df is None:
     st.markdown('<span class="reg-tag">OSFI E-23 Aligned</span><span class="reg-tag">PIPEDA / GDPR</span><span class="reg-tag">AIA-Aware</span><span class="reg-tag">Privacy by Design</span>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
     st.info("👈 Upload your file in the sidebar, map columns, and click **Apply Mapping & Analyse**.")
+    st.markdown("""
+    <div class="pii-banner">
+        <div class="pii-banner-title">⚠ Disclaimer</div>
+        This is an educational reference tool built by a student, based on publicly available frameworks and my own research and interpretation.
+        It is not a formal model validation, audit opinion, legal or financial advice, or a regulatory determination, and it is not affiliated with
+        or endorsed by any standards body or regulator. Outputs are based on self-reported inputs only. For real decisions, consult a qualified
+        professional and primary sources.
+    </div>""", unsafe_allow_html=True)
     st.stop()
 
 # ── DASHBOARD ──────────────────────────────────────────────────────────────────
@@ -624,6 +663,8 @@ st.markdown("---")
 # ── HEADER ──────────────────────────────────────────────────────────────────────
 st.markdown('<span class="slabel">Performance Overview</span>', unsafe_allow_html=True)
 st.title("Business Analytics Dashboard")
+if st.session_state.get("demo_active"):
+    st.info("Showing the bundled **Superstore demo dataset** so you can explore immediately. Upload your own CSV or Excel file in the sidebar — the engine is dataset-agnostic.")
 _meta_hdr = st.session_state.get("meta", {})
 _currency = _meta_hdr.get("currency", "CAD")
 st.markdown(f'<p style="color:rgba(232,228,220,0.4);font-size:0.82rem;margin-top:-6px;margin-bottom:8px;">'
@@ -878,7 +919,7 @@ _compliance = build_compliance_report(
 )
 _fname_comp = f"compliance_report_{_meta_exp.get('model_id','RS-DASH-001')}_{__import__('datetime').datetime.today().strftime('%Y%m%d')}.txt"
 
-exp_c1, exp_c2 = st.columns(2)
+exp_c1, exp_c2, exp_c3 = st.columns(3)
 with exp_c1:
     st.download_button("⬇  Download Filtered Data (CSV)",
                        data=fdf.to_csv(index=False).encode("utf-8"),
@@ -887,6 +928,29 @@ with exp_c2:
     st.download_button("⬇  Download Compliance Report (.txt)",
                        data=_compliance.encode("utf-8"),
                        file_name=_fname_comp, mime="text/plain", use_container_width=True)
+with exp_c3:
+    st.download_button("⬇  Download Compliance Report (.pdf)",
+                       data=build_pdf_bytes(_compliance),
+                       file_name=_fname_comp.replace(".txt", ".pdf"), mime="application/pdf", use_container_width=True)
 
 with st.expander("Show Filtered Raw Data"):
     st.dataframe(fdf, use_container_width=True)
+
+with st.expander("About / Methodology / Sources"):
+    st.markdown("""
+**What this is.** A dataset-agnostic BI dashboard with an embedded data-governance layer: PII detection, proxy-bias flagging, a data-integrity scorecard, an AIA impact-level proxy estimate, and an OSFI E-23-style model registry and compliance report.
+
+**Frameworks mapped:**
+- **OSFI Guideline E-23** — Model Risk Management (model inventory fields, owner, validation date, data quality expectations)
+- **OSFI Guideline B-13** — Technology and Cyber Risk Management
+- **Canada AIA** — Directive on Automated Decision-Making (impact-level proxy, explainability documentation)
+- **PIPEDA / Quebec Law 25** — PII detection and redaction-before-sharing
+- **Canadian Human Rights Act** — proxy-bias flagging for geographic/demographic columns
+- **NIST AI RMF 1.0** — supporting reference
+
+**Division of labour.** I designed the governance architecture — detection rules, scoring methodology, report structure. The Python/Streamlit implementation was AI-assisted.
+
+**Disclaimer.** This is an educational reference tool built by a student, based on publicly available frameworks and my own research and interpretation. It is not a formal model validation, audit opinion, legal or financial advice, or a regulatory determination, and it is not affiliated with or endorsed by any standards body or regulator. Outputs are based on self-reported inputs only. For real decisions, consult a qualified professional and primary sources.
+""")
+
+st.markdown('<p style="font-size:0.72rem;color:rgba(232,228,220,0.3);text-align:center;font-family:\'DM Mono\',monospace;letter-spacing:0.5px;padding:20px 0 8px;">Built by Khushi Rana · Educational reference tool — not a formal rating, audit opinion, or regulatory determination · <a href="https://github.com/ks-rana/retail-sales-dashboard#readme" style="color:rgba(122,172,222,0.6);">About & methodology</a></p>', unsafe_allow_html=True)

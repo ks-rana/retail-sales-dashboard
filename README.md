@@ -3,7 +3,9 @@
 A dataset-agnostic business intelligence platform with a built-in data governance layer aligned to OSFI Guideline E-23 model risk expectations and Canada's AIA Directive. Upload any tabular dataset, map your columns, and receive both standard exploratory analytics and a regulatory governance report — including a downloadable three-party sign-off compliance document.
 
 **Live tool:** https://retail-sales-dashboard-2glrgrkfmhd5py98ah7jbc.streamlit.app/  
-*(Hosted on Streamlit Community Cloud — may take 30 seconds to load on first visit. A sample retail dataset is included in the repo for demo purposes; the tool itself is dataset-agnostic.)*
+*(Hosted on Streamlit Community Cloud — may take 30 seconds to load on first visit. The bundled sample retail dataset loads automatically so the dashboard is populated immediately; upload your own CSV or Excel to analyze your data — the tool itself is dataset-agnostic.)*
+
+![Universal Analytics Engine — dashboard](assets/screenshot.png)
 
 ---
 
@@ -45,9 +47,7 @@ The governance architecture of this tool is mine. I designed:
 
 ## What I did not build from scratch
 
-The Python/Streamlit/Pandas/Plotly implementation was built using AI-assisted development. The code handles file upload, column auto-detection, runs the governance checks I designed, generates the visualizations, and assembles the compliance report. The standard analytics layer uses common Pandas/Plotly patterns; the governance layer is the original contribution.
-
-I am being explicit about this because the regulatory thinking is the part of the tool that took expertise. The implementation, while functional, is the kind of thing AI-assisted development handles routinely now.
+I designed the governance architecture — the detection rules, scoring methodology, and report structure. The Python/Streamlit/Pandas/Plotly implementation was AI-assisted: the code handles file upload and column auto-detection, runs the governance checks I designed, generates the visualizations, and assembles the compliance report.
 
 ---
 
@@ -74,7 +74,7 @@ The tool is a proof of concept, not an enterprise solution. It demonstrates the 
 
 ## Disclaimer
 
-This is an educational reference tool. The compliance report it generates is not a formal model validation, audit opinion, or OSFI supervisory determination. The AIA Impact Level it produces is a proxy estimate based on dataset structure — complete the official AIA at canada.ca/aia-tool for real public-sector deployments. For OSFI-regulated institutions, consult your Model Risk Officer and refer directly to OSFI Guidelines E-23 and B-13.
+This is an educational reference tool built by a student, based on publicly available frameworks and my own research and interpretation. The compliance report it generates is not a formal model validation, audit opinion, legal or financial advice, or a regulatory determination, and the tool is not affiliated with or endorsed by any standards body or regulator. Outputs are based on self-reported inputs only. The AIA Impact Level it produces is a proxy estimate based on dataset structure — complete the official AIA at canada.ca/aia-tool for real public-sector deployments. For OSFI-regulated institutions, consult your Model Risk Officer and refer directly to OSFI Guidelines E-23 and B-13. For real decisions, consult a qualified professional and primary sources.
 
 A sample dataset is included in the repository for demo purposes only. The tool is dataset-agnostic — upload your own CSV or Excel file via the sidebar.
 
